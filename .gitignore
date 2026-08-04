@@ -1,0 +1,23 @@
+# Node.js
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Maven
+target/
+*.class
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+.env
+
+# Local Storage/RAG
+polling_folder/processed/
+uploads/
+uploads_rag/
+faiss_index/

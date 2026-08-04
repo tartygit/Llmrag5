@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  sde-springboot:
+    build:
+      context: ./sde-app
+      dockerfile: ../Dockerfile.springboot
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=local
+      - POLLING_DIR=/app/polling_folder
+    volumes:
+      - ./polling_folder:/app/polling_folder
+      - ./uploads:/app/uploads
+
+  rag-flask:
+    build:
+      context: ./rag-app/backend
+      dockerfile: ../../Dockerfile.flask
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - MODEL_CHAT=llama3.2:latest
+      - MODEL_EMBED=nomic-embed-text
+    volumes:
+      - ./uploads_rag:/app/uploads_rag
+      - ./faiss_index:/app/faiss_index
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  react-frontend:
+    build:
+      context: ./rag-app/frontend
+      dockerfile: ../../Dockerfile.frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - sde-springboot
+      - rag-flask
