@@ -69,6 +69,18 @@ public class DocumentController {
         }
     }
 
+    @PostMapping("/{id}/return")
+    public ResponseEntity<?> returnToMaker(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        String checker = body.get("checkerUsername");
+        String remarks = body.get("remarks");
+        try {
+            Document doc = documentService.returnDocument(id, checker, remarks);
+            return ResponseEntity.ok(doc);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("message", e.getMessage()));
+        }
+    }
+
     @PostMapping("/{id}/approve")
     public ResponseEntity<?> approve(@PathVariable Long id, @RequestBody Map<String, String> body) {
         String checker = body.get("checkerUsername");

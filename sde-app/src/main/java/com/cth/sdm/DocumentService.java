@@ -97,6 +97,22 @@ public class DocumentService {
     }
 
     @Transactional
+    public Document returnDocument(Long id, String checker, String remarks) {
+        Document doc = documentRepository.findById(id).orElseThrow(() -> new RuntimeException("Document not found"));
+        doc.setStatus("RETURNED_TO_MAKER");
+        doc.setCheckerUsername(checker);
+        doc.setCheckerRemarks(remarks);
+        doc.setUpdatedAt(LocalDateTime.now());
+
+        Document saved = documentRepository.save(doc);
+
+        auditLogRepository.save(new AuditLog("RETURNED_TO_MAKER", doc.getDocIdCode(), checker,
+                "Document returned to maker for changes by " + checker + " with remarks: " + remarks));
+
+        return saved;
+    }
+
+    @Transactional
     public Document approveDocument(Long id, String checker, String remarks) {
         Document doc = documentRepository.findById(id).orElseThrow(() -> new RuntimeException("Document not found"));
         doc.setStatus("APPROVED");

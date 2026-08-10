@@ -53,4 +53,21 @@ public class DocumentServiceTest {
         Document rejectedDoc = documentService.rejectDocument(doc2.getId(), "checker", "Need formatting changes");
         assertEquals("REJECTED", rejectedDoc.getStatus());
     }
+
+    @Test
+    public void testReturnToMakerFlow() {
+        Document doc = documentService.createDocument("SDE", 3, "High Level Design", "Initial design", "1.0", "HLD-01", "maker", "hld.docx", "/path/hld.docx");
+        assertEquals("PENDING", doc.getStatus());
+
+        // Return to maker flow
+        Document returnedDoc = documentService.returnDocument(doc.getId(), "checker", "Please clarify system components integration");
+        assertEquals("RETURNED_TO_MAKER", returnedDoc.getStatus());
+        assertEquals("checker", returnedDoc.getCheckerUsername());
+        assertEquals("Please clarify system components integration", returnedDoc.getCheckerRemarks());
+
+        // Check audit log
+        List<AuditLog> logs = documentService.getAuditLogsForDoc(doc.getDocIdCode());
+        assertFalse(logs.isEmpty());
+        assertEquals("RETURNED_TO_MAKER", logs.get(0).getActionType());
+    }
 }

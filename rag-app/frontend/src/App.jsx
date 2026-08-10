@@ -312,7 +312,7 @@ export default function App() {
     }
   };
 
-  // Checker actions (Approve, Reject)
+  // Checker actions (Approve, Reject, Return)
   const handleCheckerAction = async (id, action) => {
     try {
       const res = await fetch(`${SPRING_BOOT_URL}/api/documents/${id}/${action}`, {
@@ -324,22 +324,24 @@ export default function App() {
         })
       });
       if (res.ok) {
-        setNotificationMsg(`Document was ${action}d successfully.`);
+        const actionLabel = action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'returned to maker';
+        setNotificationMsg(`Document was successfully ${actionLabel}.`);
         setCheckerRemarks('');
         fetchDocuments();
         setSelectedDoc(null);
       }
     } catch (e) {
       // Local simulator
+      const targetStatus = action === 'approve' ? 'APPROVED' : action === 'reject' ? 'REJECTED' : 'RETURNED_TO_MAKER';
       setDocuments(documents.map(d => d.id === id ? {
         ...d,
-        status: action === 'approve' ? 'APPROVED' : 'REJECTED',
+        status: targetStatus,
         checkerUsername: user ? user.username : 'checker',
         checkerRemarks: checkerRemarks
       } : d));
       setCheckerRemarks('');
       setSelectedDoc(null);
-      setNotificationMsg(`Local offline simulation: document ${action}d.`);
+      setNotificationMsg(`Local offline simulation: document status changed to ${targetStatus}.`);
     }
   };
 
@@ -1023,40 +1025,84 @@ Ensure your deployment templates are registered for the checker workflow. Also, 
                   </table>
                 </div>
 
-                {/* Action block */}
+                {/* Action block with full document preview, and Return to Maker capabilities */}
                 {selectedDoc && selectedDoc.status === 'PENDING' && (
-                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
-                    <h4 className="font-bold text-slate-800 text-sm">Reviewing Deliverable {selectedDoc.docIdCode}</h4>
-                    <p className="text-xs text-slate-600 bg-white p-3 rounded border border-slate-100">
-                      <strong>Deliverable Goal:</strong> {selectedDoc.description}
-                    </p>
+                  <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4">
+                    <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                      <h4 className="font-bold text-slate-800 text-sm">Auditing Deliverable: {selectedDoc.docIdCode}</h4>
+                      <span className="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded font-mono font-bold">
+                        App Code: {selectedDoc.appCode}
+                      </span>
+                    </div>
+
+                    {/* Inline Document Preview Panel */}
+                    <div className="bg-white p-4 rounded-lg border border-slate-200 space-y-3 shadow-inner">
+                      <span className="text-[10px] text-slate-400 font-extrabold uppercase block">📄 Document Viewer Frame</span>
+                      <div className="grid grid-cols-2 gap-3 text-xs font-mono">
+                        <div>
+                          <span className="text-slate-400 block text-[9px] uppercase">Title</span>
+                          <span className="font-bold text-slate-800">{selectedDoc.documentTitle}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block text-[9px] uppercase">Document Code</span>
+                          <span className="font-bold text-slate-800">{selectedDoc.documentCode}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block text-[9px] uppercase">Version</span>
+                          <span className="font-bold text-slate-800">{selectedDoc.versionNumber}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block text-[9px] uppercase">Attached Filename</span>
+                          <span className="font-bold text-indigo-600 truncate block">{selectedDoc.fileName || 'N/A'}</span>
+                        </div>
+                      </div>
+                      <div className="pt-2 border-t border-slate-100">
+                        <span className="text-slate-400 block text-[9px] uppercase font-mono">Deliverable Description</span>
+                        <p className="text-xs text-slate-700 italic font-sans">"{selectedDoc.description || 'No description provided'}"</p>
+                      </div>
+                    </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">Remarks or Auditor Notes</label>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">Remarks / Auditor Changes Notes (Required to Return)</label>
                       <textarea
                         rows={3}
                         required
                         value={checkerRemarks}
                         onChange={(e) => setCheckerRemarks(e.target.value)}
-                        placeholder="Add verification logs..."
+                        placeholder="Add dynamic audit notes, verification codes, or specify changes needed for Maker..."
                         className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500"
                       />
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                       <button
                         onClick={() => handleCheckerAction(selectedDoc.id, 'approve')}
-                        className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-sm shadow flex items-center justify-center gap-2"
+                        className="py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs shadow flex items-center justify-center gap-1.5 transition"
                       >
-                        <CheckCircle className="h-4.5 w-4.5" />
-                        <span>Approve deliverable</span>
+                        <CheckCircle className="h-4 w-4" />
+                        <span>Approve</span>
                       </button>
+
+                      <button
+                        onClick={() => {
+                          if (!checkerRemarks) {
+                            alert("Please provide remarks to explain what needs to be changed!");
+                            return;
+                          }
+                          handleCheckerAction(selectedDoc.id, 'return');
+                        }}
+                        className="py-2 px-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg text-xs shadow flex items-center justify-center gap-1.5 transition"
+                      >
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        <span>Return to Maker</span>
+                      </button>
+
                       <button
                         onClick={() => handleCheckerAction(selectedDoc.id, 'reject')}
-                        className="flex-1 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-sm shadow flex items-center justify-center gap-2"
+                        className="py-2 px-3 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-xs shadow flex items-center justify-center gap-1.5 transition"
                       >
-                        <XCircle className="h-4.5 w-4.5" />
-                        <span>Reject deliverable</span>
+                        <XCircle className="h-4 w-4" />
+                        <span>Reject</span>
                       </button>
                     </div>
                   </div>
